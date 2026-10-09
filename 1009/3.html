@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>해안 안전 관제</title>
+
+  <style>
+    :root {
+      /* 기본 팔레트 */
+      --navy: #10243a;
+      --blue: #2d78c4;
+      --page: #f2f5f8;
+      --surface: #ffffff;
+      --text: #172a42;
+      --muted: #718198;
+      --line: #dce3eb;
+
+      /* 상태 색상 */
+      --normal: #159b78;
+      --caution: #d89515;
+      --danger: #d94b4b;
+
+      /* 한 가지 간격·모서리 규칙 */
+      --radius: 3px;
+      --gap: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--page);
+      font-family:
+        Pretendard,
+        "Noto Sans KR",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    /* 앱 레이아웃 */
+    .app {
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 5;
+      display: flex;
+      width: 300px;
+      flex-direction: column;
+      padding: 28px 20px 22px;
+      overflow-y: auto;
+      color: #e8eef5;
+      background: var(--navy);
+    }
+
+    .main {
+      min-height: 100vh;
+      margin-left: 300px;
+    }
+
+    /* 사이드바 */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 78px;
+      padding: 0 8px 22px;
+      border-bottom: 1px solid #ffffff2b;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 48px;
+      height: 48px;
+      flex: 0 0 48px;
+      place-items: center;
+      color: white;
+      background: var(--blue);
+      font-size: 25px;
+      font-weight: 700;
+    }
+
+    .brand-name {
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+
+    .sidebar-heading {
+      margin: 26px 8px 12px;
+      color: #a9b8c9;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .area-list {
+      display: grid;
+      gap: 4px;
+    }
+
+    .area-group {
+      min-width: 0;
+    }
+
+    .area-button {
+      display: flex;
+      width: 100%;
+      min-height: 48px;
+      align-items: center;
+      gap: 11px;
+      padding: 0 12px;
+      border: 1px solid transparent;
+      color: #dce5ef;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .area-button:hover {
+      background: #ffffff0c;
+    }
+
+    .area-button.active {
+      border-color: #355474;
+      border-left: 3px solid var(--blue);
+      background: #193653;
+    }
+
+    .area-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .area-status {
+      color: #aebdcd;
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 9px;
+      border-radius: 50%;
+      background: var(--normal);
+    }
+
+    .status-dot.caution {
+      background: var(--caution);
+    }
+
+    .status-dot.danger {
+      background: var(--danger);
+    }
+
+    .sea-list {
+      display: none;
+      padding: 3px 0 6px 22px;
+    }
+
+    .sea-list.open {
+      display: grid;
+      gap: 2px;
+    }
+
+    .sea-button {
+      display: flex;
+      width: 100%;
+      min-height: 34px;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+      border: 0;
+      color: #acbbcb;
+      background: transparent;
+      font-size: 12px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .sea-button:hover,
+    .sea-button.active {
+      color: white;
+      background: #ffffff10;
+    }
+
+    .sea-button .status-dot {
+      width: 7px;
+      height: 7px;
+      flex-basis: 7px;
+    }
+
+    .sidebar-spacer {
+      flex: 1;
+      min-height: 24px;
+    }
+
+    .system-status {
+      margin: 16px 4px 0;
+      padding: 15px;
+      border: 1px solid #ffffff2b;
+      color: #c4d0dc;
+      font-size: 12px;
+    }
+
+    .system-status-title {
+      margin-bottom: 9px;
+      color: #e3ebf4;
+      font-weight: 600;
+    }
+
+    .system-connected {
+      margin-bottom: 4px;
+      color: #58c7a4;
+      font-weight: 600;
+    }
+
+    /* 상단바 */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      display: flex;
+      min-height: 82px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+
+    .page-subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .topbar-tools {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .monitor-status,
+    .clock,
+    .icon-button {
+      display: flex;
+      min-height: 38px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      white-space: nowrap;
+    }
+
+    .monitor-status {
+      gap: 8px;
+      padding: 0 12px;
+      border-color: #c6e4da;
+      color: var(--normal);
+      background: #f2faf7;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .monitor-status .status-dot {
+      width: 7px;
+      height: 7px;
+      flex-basis: 7px;
+    }
+
+    .clock {
+      min-width: 105px;
+      padding: 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .icon-button {
+      width: 38px;
+      color: var(--text);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* 대시보드 공통 */
+    .dashboard {
+      display: grid;
+      gap: var(--gap);
+      padding: 22px 24px 32px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--gap);
+    }
+
+    .summary-card {
+      min-height: 120px;
+      padding: 17px 19px;
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--blue);
+      background: var(--surface);
+    }
+
+    .summary-label,
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .summary-value {
+      margin-top: 8px;
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+
+    .summary-value small {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .summary-note {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 290px;
+      align-items: start;
+      gap: var(--gap);
+    }
+
+    .center-column,
+    .right-column {
+      display: grid;
+      min-width: 0;
+      gap: var(--gap);
+    }
+
+    /* 카드: 흰색 면을 기본으로 하고 그림자는 사용하지 않음 */
+    .panel,
+    .metric-card,
+    .risk-card {
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .panel {
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      min-height: 56px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 17px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .panel-note {
+      color: var(--muted);
+      font-size: 11px;
+      text-align: right;
+    }
+
+    /* 시연용 지도 */
+    .map {
+      position: relative;
+      height: 390px;
+      overflow: hidden;
+      background-color: #acd1df;
+      background-image:
+        linear-gradient(0deg, transparent 49.5%, #ffffff40 50%, transparent 50.5%),
+        linear-gradient(90deg, transparent 49.5%, #ffffff40 50%, transparent 50.5%);
+      background-size: 54px 54px;
+    }
+
+    .map-land {
+      position: absolute;
+      inset: 0 49% 0 0;
+      background: #dce7d5;
+      clip-path: polygon(
+        0 0, 100% 0, 95% 19%, 89% 38%,
+        97% 57%, 88% 78%, 95% 100%, 0 100%
+      );
+    }
+
+    .map-shore {
+      position: absolute;
+      top: -8%;
+      bottom: -8%;
+      left: 47%;
+      width: 25px;
+      background: #eff4ed;
+      opacity: .85;
+      transform: rotate(12deg);
+    }
+
+    .map-breakwater {
+      position: absolute;
+      top: 48%;
+      left: 39%;
+      width: 76%;
+      height: 20px;
+      border: 6px solid white;
+      background: #c0c8c4;
+      transform: rotate(-13deg);
+      transform-origin: left center;
+    }
+
+    .map-breakwater-vertical {
+      position: absolute;
+      top: 22%;
+      left: 46%;
+      width: 23px;
+      height: 54%;
+      border: 4px solid white;
+      background: repeating-linear-gradient(
+        180deg,
+        #748396 0 13px,
+        #c4cdd2 13px 18px
+      );
+      transform: rotate(17deg);
+    }
+
+    .map-label {
+      position: absolute;
+      padding: 7px 10px;
+      color: #39566b;
+      background: #ffffffed;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .map-label.land {
+      top: 25%;
+      left: 15%;
+    }
+
+    .map-label.sea {
+      top: 17%;
+      right: 12%;
+    }
+
+    .map-marker {
+      position: absolute;
+      top: 51%;
+      left: 51%;
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 4px solid white;
+      border-radius: 50%;
+      color: white;
+      background: var(--danger);
+      box-shadow: 0 0 0 5px #d94b4b35;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .map-legend {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      display: flex;
+      gap: 12px;
+      padding: 8px 10px;
+      color: #536780;
+      background: white;
+      font-size: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+    }
+
+    .legend-dot.blue {
+      background: var(--blue);
+    }
+
+    /* CCTV 시연 화면 */
+    .cctv-scene {
+      position: relative;
+      height: 300px;
+      overflow: hidden;
+      background:
+        linear-gradient(165deg, transparent 0 38%, #aec1c0 38.5% 49%, transparent 49.5%),
+        linear-gradient(180deg, #708a8e 0 49%, #426575 50% 72%, #203b49 73% 100%);
+    }
+
+    .cctv-scene::before {
+      position: absolute;
+      right: -5%;
+      bottom: 27%;
+      left: -5%;
+      height: 15px;
+      border-top: 4px solid #d1d3c8;
+      border-bottom: 4px solid #d1d3c8;
+      background: repeating-linear-gradient(
+        90deg,
+        #75817e 0 22px,
+        #d6d6c9 22px 29px
+      );
+      content: "";
+      transform: rotate(-4deg);
+    }
+
+    .cctv-scene::after {
+      position: absolute;
+      inset: 58% 0 0;
+      border-top: 1px solid #ffffff35;
+      background: linear-gradient(180deg, transparent, #102b3a70);
+      content: "";
+    }
+
+    .live-label,
+    .camera-time {
+      position: absolute;
+      z-index: 1;
+      top: 13px;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .live-label {
+      left: 13px;
+      padding: 5px 8px;
+      background: var(--danger);
+    }
+
+    .camera-time {
+      right: 13px;
+      text-shadow: 0 1px 4px #000;
+    }
+
+    .detection-box {
+      position: absolute;
+      z-index: 1;
+      right: 39%;
+      bottom: 18%;
+      width: 38px;
+      height: 78px;
+      border: 2px solid #ff6262;
+    }
+
+    .cctv-note {
+      padding: 8px 13px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    /* 센서 카드 */
+    .metric-card {
+      min-height: 147px;
+      padding: 16px;
+    }
+
+    .metric-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .metric-icon {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .metric-value {
+      margin-top: 14px;
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+
+    .metric-value small {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .progress-track {
+      height: 7px;
+      margin-top: 12px;
+      overflow: hidden;
+      background: #e9edf2;
+    }
+
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      background: var(--normal);
+      transition: width .25s ease;
+    }
+
+    .progress-fill.caution {
+      background: var(--caution);
+    }
+
+    .progress-fill.danger {
+      background: var(--danger);
+    }
+
+    .metric-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    /* 종합 위험도 */
+    .risk-card {
+      padding: 16px;
+    }
+
+    .risk-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .risk-badge {
+      padding: 5px 8px;
+      color: var(--caution);
+      background: #fff6e5;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .risk-value {
+      margin-top: 15px;
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+
+    .risk-value small {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .risk-caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 17px;
+    }
+
+    .action-button {
+      min-height: 40px;
+      padding: 0 8px;
+      border: 1px solid var(--line);
+      color: var(--text);
+      background: white;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .action-button.primary {
+      border-color: var(--blue);
+      color: white;
+      background: var(--blue);
+    }
+
+    .action-button:hover {
+      filter: brightness(.96);
+    }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 10;
+      padding: 11px 15px;
+      color: white;
+      background: var(--navy);
+      font-size: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(6px);
+      transition: .2s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 반응형 */
+    @media (min-width: 1600px) {
+      .sidebar {
+        width: 22%;
+      }
+
+      .main {
+        margin-left: 22%;
+      }
+
+      .dashboard {
+        padding: 24px 28px 36px;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: minmax(0, 1fr) 330px;
+      }
+
+      .map {
+        height: 450px;
+      }
+
+      .cctv-scene {
+        height: 340px;
+      }
+
+      .summary-card {
+        min-height: 132px;
+      }
+    }
+
+    @media (max-width: 1050px) {
+      .sidebar {
+        width: 235px;
+      }
+
+      .main {
+        margin-left: 235px;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: minmax(0, 1fr) 245px;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .dashboard {
+        padding-right: 16px;
+        padding-left: 16px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .sidebar {
+        position: static;
+        width: 100%;
+        padding: 13px;
+      }
+
+      .brand {
+        min-height: 57px;
+        padding: 0 5px 12px;
+      }
+
+      .brand-mark {
+        width: 40px;
+        height: 40px;
+        flex-basis: 40px;
+        font-size: 21px;
+      }
+
+      .brand-name {
+        font-size: 16px;
+      }
+
+      .sidebar-heading {
+        margin: 13px 5px 8px;
+      }
+
+      .area-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .area-button {
+        min-height: 40px;
+        gap: 7px;
+        padding: 0 7px;
+      }
+
+      .area-name {
+        font-size: 12px;
+      }
+
+      .area-status,
+      .sidebar-spacer,
+      .system-status {
+        display: none;
+      }
+
+      .sea-list {
+        padding-left: 2px;
+      }
+
+      .sea-button {
+        min-height: 30px;
+        padding: 0 6px;
+        font-size: 10px;
+      }
+
+      .main {
+        margin-left: 0;
+      }
+
+      .topbar {
+        position: static;
+        min-height: 70px;
+        padding: 11px 14px;
+      }
+
+      .page-title {
+        font-size: 18px;
+      }
+
+      .page-subtitle {
+        font-size: 11px;
+      }
+
+      .monitor-status,
+      .clock,
+      .icon-button {
+        min-height: 34px;
+        font-size: 10px;
+      }
+
+      .monitor-status {
+        padding: 0 8px;
+      }
+
+      .clock {
+        min-width: auto;
+        padding: 0 8px;
+      }
+
+      .icon-button {
+        width: 34px;
+      }
+
+      .dashboard {
+        gap: 12px;
+        padding: 13px 12px 24px;
+      }
+
+      .summary-grid {
+        gap: 10px;
+      }
+
+      .summary-card {
+        min-height: 100px;
+        padding: 13px;
+      }
+
+      .summary-value {
+        font-size: 22px;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .right-column {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .metric-card {
+        min-height: 130px;
+        padding: 13px;
+      }
+
+      .risk-card {
+        grid-column: 1 / -1;
+      }
+
+      .map {
+        height: 290px;
+      }
+
+      .cctv-scene {
+        height: 230px;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .topbar-tools {
+        gap: 5px;
+      }
+
+      .monitor-status {
+        width: 32px;
+        padding: 0;
+        overflow: hidden;
+        font-size: 0;
+      }
+
+      .monitor-status .status-dot {
+        width: 8px;
+        height: 8px;
+        flex-basis: 8px;
+      }
+
+      .clock {
+        display: none;
+      }
+
+      .panel-header {
+        min-height: 49px;
+        padding: 0 12px;
+      }
+
+      .panel-title {
+        font-size: 13px;
+      }
+
+      .panel-note {
+        font-size: 9px;
+      }
+
+      .map {
+        height: 250px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">〰</div>
+        <div class="brand-name">해안 안전 관제</div>
+      </div>
+
+      <div class="sidebar-heading">감시 구역 선택</div>
+      <nav class="area-list" id="areaList" aria-label="감시 구역"></nav>
+
+      <div class="sidebar-spacer"></div>
+
+      <section class="system-status">
+        <div class="system-status-title">시스템 상태</div>
+        <div class="system-connected">● 센서 연결 정상</div>
+        <div>마지막 점검: 오늘 08:00</div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">방파제 실시간 감시</h1>
+          <div class="page-subtitle" id="pageSubtitle">
+            부산광역시 · 해운대 방파제 감시 구역
+          </div>
+        </div>
+
+        <div class="topbar-tools">
+          <div class="monitor-status">
+            <span class="status-dot"></span>
+            실시간 모니터링
+          </div>
+          <div class="clock" id="clock">--:--:--</div>
+          <button class="icon-button" id="noticeButton" aria-label="알림">◇</button>
+        </div>
+      </header>
+
+      <div class="dashboard">
+        <section class="summary-grid" aria-label="관제 요약">
+          <article class="summary-card">
+            <div class="summary-label">감시 구역</div>
+            <div class="summary-value">06 <small>개소</small></div>
+            <div class="summary-note">전체 방파제 관제 구역</div>
+          </article>
+
+          <article class="summary-card">
+            <div class="summary-label">온라인 카메라</div>
+            <div class="summary-value">12 <small>/ 12대</small></div>
+            <div class="summary-note">영상 수신 정상</div>
+          </article>
+
+          <article class="summary-card">
+            <div class="summary-label">감지 이벤트</div>
+            <div class="summary-value">03 <small>건</small></div>
+            <div class="summary-note">최근 24시간 기준</div>
+          </article>
+
+          <article class="summary-card">
+            <div class="summary-label">현재 선택 구역</div>
+            <div class="summary-value" id="summaryArea">해운대</div>
+            <div class="summary-note" id="summaryNote">센서 데이터 수신 중</div>
+          </article>
+        </section>
+
+        <section class="dashboard-grid">
+          <div class="center-column">
+            <section class="panel">
+              <header class="panel-header">
+                <h2 class="panel-title">방파제 위치 및 감지 현황</h2>
+                <span class="panel-note">지도는 화면 시연용 예시입니다</span>
+              </header>
+
+              <div class="map" aria-label="시연용 해안 위치도">
+                <div class="map-land"></div>
+                <div class="map-shore"></div>
+                <div class="map-breakwater"></div>
+                <div class="map-breakwater-vertical"></div>
+
+                <div class="map-label land">육지 구역</div>
+                <div class="map-label sea" id="mapSeaLabel">동해 · 해상</div>
+                <div class="map-marker">!</div>
+
+                <div class="map-legend">
+                  <span class="legend-item">
+                    <i class="legend-dot"></i>주의 감지
+                  </span>
+                  <span class="legend-item">
+                    <i class="legend-dot blue"></i>CCTV
+                  </span>
+                  <span class="legend-item">방파제 구간</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <header class="panel-header">
+                <h2 class="panel-title">현장 CCTV</h2>
+                <span class="panel-note" id="cameraLabel">CAM-01 · 해운대</span>
+              </header>
+
+              <div class="cctv-scene" aria-label="CCTV 시연 화면">
+                <span class="live-label">LIVE · 시연 화면</span>
+                <span class="camera-time" id="cameraTime">--:--:--</span>
+                <div class="detection-box" aria-label="감지 위치"></div>
+              </div>
+
+              <div class="cctv-note">
+                실제 CCTV 영상이 아닌 시연용 그래픽입니다.
+              </div>
+            </section>
+          </div>
+
+          <aside class="right-column" aria-label="센서 정보">
+            <article class="metric-card">
+              <div class="metric-top">
+                <span class="metric-label">풍속</span>
+                <span class="metric-icon">풍</span>
+              </div>
+              <div class="metric-value">
+                <span id="windValue">14.2</span> <small>m/s</small>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill caution" id="windBar"></div>
+              </div>
+              <div class="metric-footer">
+                <span id="windStatus">보통</span>
+                <span>기준 40 m/s</span>
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-top">
+                <span class="metric-label">강수량</span>
+                <span class="metric-icon">비</span>
+              </div>
+              <div class="metric-value">
+                <span id="rainValue">13.7</span> <small>mm/h</small>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="rainBar"></div>
+              </div>
+              <div class="metric-footer">
+                <span id="rainStatus">약한 비</span>
+                <span>기준 100 mm/h</span>
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-top">
+                <span class="metric-label">유의 파고</span>
+                <span class="metric-icon">파</span>
+              </div>
+              <div class="metric-value">
+                <span id="waveValue">1.1</span> <small>m</small>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill caution" id="waveBar"></div>
+              </div>
+              <div class="metric-footer">
+                <span id="waveStatus">평온</span>
+                <span>기준 5 m</span>
+              </div>
+            </article>
+
+            <article class="risk-card">
+              <div class="risk-header">
+                <span>종합 위험도</span>
+                <span class="risk-badge" id="riskBadge">관심</span>
+              </div>
+
+              <div class="risk-value">
+                <span id="riskValue">25</span><small> / 100점</small>
+              </div>
+
+              <div class="progress-track">
+                <div class="progress-fill caution" id="riskBar"></div>
+              </div>
+
+              <div class="risk-caption">
+                <span>센서값 기반 시연 점수</span>
+                <span id="riskNote">관찰 필요</span>
+              </div>
+
+              <div class="action-buttons">
+                <button class="action-button" id="broadcastButton">
+                  안내 방송
+                </button>
+                <button class="action-button primary" id="dispatchButton">
+                  출동 요청
+                </button>
+              </div>
+            </article>
+          </aside>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    const areaData = [
+      {
+        name: "동구",
+        status: "정상",
+        seas: ["부산항 북항"],
+        wind: 10.2,
+        rain: 3.1,
+        wave: 0.8
+      },
+      {
+        name: "남구",
+        status: "관심",
+        seas: ["오륙도·이기대 해역"],
+        wind: 14.1,
+        rain: 12.4,
+        wave: 1.6
+      },
+      {
+        name: "북구",
+        status: "정상",
+        seas: ["낙동강 하구 인접 해역"],
+        wind: 8.8,
+        rain: 0,
+        wave: 0.7
+      },
+      {
+        name: "해운대",
+        status: "관심",
+        seas: ["해운대 방파제", "송정 해역"],
+        wind: 14.2,
+        rain: 13.7,
+        wave: 1.1
+      },
+      {
+        name: "수영구",
+        status: "관심",
+        seas: ["광안리 해역", "수영만"],
+        wind: 18.3,
+        rain: 15,
+        wave: 2.1
+      },
+      {
+        name: "강서구",
+        status: "정상",
+        seas: ["낙동강 하구", "가덕도 해역"],
+        wind: 9.5,
+        rain: 2.3,
+        wave: 1.0
+      }
+    ];
+
+    let selectedArea = "해운대";
+    let selectedSea = "해운대 방파제";
+    let toastTimeout;
+
+    const $ = (id) => document.getElementById(id);
+
+    function getStatusClass(status) {
+      if (status === "위험") return "danger";
+      if (status === "주의" || status === "관심") return "caution";
+      return "";
+    }
+
+    function renderAreas() {
+      const areaList = $("areaList");
+
+      areaList.innerHTML = areaData.map((area) => {
+        const isActive = area.name === selectedArea;
+        const dotClass = getStatusClass(area.status);
+
+        const seaButtons = area.seas.map((sea) => `
+          <button
+            class="sea-button ${sea === selectedSea ? "active" : ""}"
+            type="button"
+            data-sea="${sea}">
+            <span class="status-dot ${dotClass}"></span>
+            <span>${sea}</span>
+          </button>
+        `).join("");
+
+        return `
+          <div class="area-group">
+            <button
+              class="area-button ${isActive ? "active" : ""}"
+              type="button"
+              data-area="${area.name}">
+              <span class="status-dot ${dotClass}"></span>
+              <span class="area-name">${area.name}</span>
+              <span class="area-status">${area.status}</span>
+            </button>
+
+            <div class="sea-list ${isActive ? "open" : ""}">
+              ${seaButtons}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      areaList.querySelectorAll(".area-button").forEach((button) => {
+        button.addEventListener("click", () => {
+          const area = areaData.find((item) => item.name === button.dataset.area);
+
+          selectedArea = area.name;
+          selectedSea = area.seas[0];
+
+          renderAreas();
+          renderDashboard();
+        });
+      });
+
+      areaList.querySelectorAll(".sea-button").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedSea = button.dataset.sea;
+          renderAreas();
+          renderDashboard();
+        });
+      });
+    }
+
+    function calculateRisk(area) {
+      const score = Math.round(
+        area.wind / 40 * 35 +
+        area.rain / 100 * 25 +
+        area.wave / 5 * 40
+      );
+
+      return Math.min(score, 100);
+    }
+
+    function updateMetric({
+      value,
+      maximum,
+      valueId,
+      barId,
+      statusId,
+      getLabel,
+      cautionAt,
+      dangerAt
+    }) {
+      $(valueId).textContent = value.toFixed(1);
+
+      const bar = $(barId);
+      bar.style.width = `${Math.min(value / maximum * 100, 100)}%`;
+      bar.className = "progress-fill";
+
+      if (value >= dangerAt) {
+        bar.classList.add("danger");
+      } else if (value >= cautionAt) {
+        bar.classList.add("caution");
+      }
+
+      $(statusId).textContent = getLabel(value);
+    }
+
+    function renderDashboard() {
+      const area = areaData.find((item) => item.name === selectedArea);
+
+      $("summaryArea").textContent = area.name;
+      $("summaryNote").textContent = `${selectedSea} 센서 데이터 수신 중`;
+      $("pageSubtitle").textContent =
+        `부산광역시 · ${selectedSea} 감시 구역`;
+      $("cameraLabel").textContent = `CAM-01 · ${selectedSea}`;
+      $("mapSeaLabel").textContent = selectedSea;
+
+      updateMetric({
+        value: area.wind,
+        maximum: 40,
+        valueId: "windValue",
+        barId: "windBar",
+        statusId: "windStatus",
+        cautionAt: 15,
+        dangerAt: 25,
+        getLabel: (value) =>
+          value >= 25 ? "강풍" : value >= 15 ? "주의" : "보통"
+      });
+
+      updateMetric({
+        value: area.rain,
+        maximum: 100,
+        valueId: "rainValue",
+        barId: "rainBar",
+        statusId: "rainStatus",
+        cautionAt: 15,
+        dangerAt: 50,
+        getLabel: (value) =>
+          value >= 50 ? "많은 비" : value >= 15 ? "비" : "약한 비"
+      });
+
+      updateMetric({
+        value: area.wave,
+        maximum: 5,
+        valueId: "waveValue",
+        barId: "waveBar",
+        statusId: "waveStatus",
+        cautionAt: 1.5,
+        dangerAt: 3,
+        getLabel: (value) =>
+          value >= 3 ? "높은 파고" : value >= 1.5 ? "주의" : "평온"
+      });
+
+      const risk = calculateRisk(area);
+      const riskStatus =
+        risk >= 70 ? "위험" :
+        risk >= 40 ? "주의" :
+        "관심";
+
+      $("riskValue").textContent = risk;
+      $("riskBar").style.width = `${risk}%`;
+      $("riskBar").className = `progress-fill ${getStatusClass(riskStatus)}`;
+      $("riskBadge").textContent = riskStatus;
+      $("riskNote").textContent =
+        riskStatus === "위험" ? "즉시 확인 필요" :
+        riskStatus === "주의" ? "현장 확인 필요" :
+        "관찰 필요";
+
+      if (riskStatus === "위험") {
+        $("riskBadge").style.color = "var(--danger)";
+        $("riskBadge").style.background = "#fff0f0";
+      } else if (riskStatus === "주의") {
+        $("riskBadge").style.color = "var(--caution)";
+        $("riskBadge").style.background = "#fff6e5";
+      } else {
+        $("riskBadge").style.color = "var(--muted)";
+        $("riskBadge").style.background = "#f1f4f7";
+      }
+    }
+
+    function updateClock() {
+      const time = new Date().toLocaleTimeString("ko-KR", {
+        hour12: false
+      });
+
+      $("clock").textContent = time;
+      $("cameraTime").textContent = time;
+    }
+
+    function showToast(message) {
+      const toast = $("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2200);
+    }
+
+    $("broadcastButton").addEventListener("click", () => {
+      showToast(`${selectedSea} 안내 방송을 요청했습니다.`);
+    });
+
+    $("dispatchButton").addEventListener("click", () => {
+      showToast(`${selectedSea} 현장 출동을 요청했습니다.`);
+    });
+
+    $("noticeButton").addEventListener("click", () => {
+      showToast("새로운 알림이 없습니다.");
+    });
+
+    renderAreas();
+    renderDashboard();
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>
